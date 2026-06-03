@@ -7,38 +7,34 @@ import VisibilityChecker from '@/components/star/VisibilityChecker';
 import SimilarStars from '@/components/star/SimilarStars';
 import StarViewerWrapper from '@/components/star/StarViewerWrapper';
 import type { FeaturedStar } from '@/types/star';
-import fs from 'fs';
-import path from 'path';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 
-function getAllStars(): FeaturedStar[] {
+let cachedStars: FeaturedStar[] | null = null;
+
+async function getAllStars(): Promise<FeaturedStar[]> {
+  if (cachedStars) return cachedStars;
   try {
+    const fs = await import('fs');
+    const path = await import('path');
     const filePath = path.join(process.cwd(), 'public', 'data', 'stars-massive.json');
-    console.log("Reading stars from:", filePath);
     const raw = fs.readFileSync(filePath, 'utf-8');
-    const data = JSON.parse(raw);
-    console.log("Successfully parsed", data.length, "items");
-    return data;
+    cachedStars = JSON.parse(raw);
+    return cachedStars!;
   } catch (err) {
     console.error("FAILED to read stars-massive.json:", err);
     return [];
   }
 }
 
-function getStarBySlugSync(slug: string): FeaturedStar | null {
-  const stars = getAllStars();
+async function getStarBySlug(slug: string): Promise<FeaturedStar | null> {
+  const stars = await getAllStars();
   return stars.find(s => s.slug === slug) ?? null;
-}
-
-export async function generateStaticParams() {
-  const stars = getAllStars();
-  return stars.map(s => ({ slug: s.slug }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const star = getStarBySlugSync(slug);
+  const star = await getStarBySlug(slug);
   if (!star) return { title: 'Star Not Found' };
 
   const typeName = star.type === 'Planet' ? 'Planet' : 'Star';
@@ -61,11 +57,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function StarDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const star = getStarBySlugSync(slug);
+  const star = await getStarBySlug(slug);
 
   if (!star) notFound();
 
-  const allStars = getAllStars();
+  const allStars = await getAllStars();
   const cls = star.spectralClass?.[0]?.toUpperCase() ?? 'G';
   
   let similarStars = [];
