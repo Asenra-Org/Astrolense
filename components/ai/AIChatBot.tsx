@@ -102,7 +102,7 @@ export default function AIChatBot() {
                           li: ({node, ...props}) => <li className="pl-1" {...props} />
                         }}
                       >
-                        {m.content || (m.parts && m.parts.map((p: any) => p.type === 'text' ? p.text : '').join('')) || ''}
+                        {m.parts ? m.parts.map(p => p.type === 'text' ? p.text : '').join('') : ''}
                       </ReactMarkdown>
                     </div>
                   </div>
