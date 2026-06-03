@@ -43,3 +43,6 @@ next-env.d.ts
 # Firebase admin key
 /firebase-admin-key.json
 
+
+# Local Netlify folder
+.netlify
