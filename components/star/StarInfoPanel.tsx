@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { saveStar, removeSavedStar, isStarSaved } from '@/lib/firestore';
 import { toast } from 'sonner';
-import { Bookmark, BookmarkCheck, Share2 } from 'lucide-react';
+import { Share2 } from 'lucide-react';
 import type { FeaturedStar } from '@/types/star';
 import {
   formatDistance,
@@ -21,43 +20,6 @@ interface StarInfoPanelProps {
 
 export default function StarInfoPanel({ star }: StarInfoPanelProps) {
   const { user } = useAuth();
-  const [saved, setSaved] = useState(false);
-  const [savingLoading, setSavingLoading] = useState(false);
-
-  useEffect(() => {
-    if (user) {
-      isStarSaved(user.uid, star.slug).then(setSaved);
-    }
-  }, [user, star.slug]);
-
-  const handleSave = async () => {
-    if (!user) {
-      toast.error('Sign in to save stars to your collection');
-      return;
-    }
-    setSavingLoading(true);
-    try {
-      if (saved) {
-        await removeSavedStar(user.uid, star.slug);
-        setSaved(false);
-        toast.success(`Removed ${star.commonName} from collection`);
-      } else {
-        await saveStar(user.uid, {
-          starId: star.slug,
-          starName: star.commonName,
-          constellation: star.constellation,
-          spectralClass: star.spectralClass,
-          savedAt: new Date(),
-        });
-        setSaved(true);
-        toast.success(`${star.commonName} saved to your collection! ✦`);
-      }
-    } catch {
-      toast.error('Failed to update collection');
-    } finally {
-      setSavingLoading(false);
-    }
-  };
 
   const handleShare = async () => {
     const url = window.location.href;
@@ -161,15 +123,6 @@ export default function StarInfoPanel({ star }: StarInfoPanelProps) {
 
       {/* Action buttons */}
       <div className="flex gap-3 flex-wrap">
-        <button
-          onClick={handleSave}
-          disabled={savingLoading}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-body text-sm font-medium transition-all ${saved ? 'bg-accent-gradient text-bg shadow-[0_0_15px_rgba(137,170,204,0.4)]' : 'bg-white/5 border border-white/10 text-text-primary hover:bg-white/10'}`}
-        >
-          {saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
-          {saved ? 'Saved' : 'Save to Collection'}
-        </button>
-
         <button
           onClick={handleShare}
           className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/5 border border-white/10 text-text-primary font-body text-sm font-medium hover:bg-white/10 transition-all"

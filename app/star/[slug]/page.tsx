@@ -9,6 +9,8 @@ import StarViewerWrapper from '@/components/star/StarViewerWrapper';
 import type { FeaturedStar } from '@/types/star';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
+import SaveStarButton from '@/components/star/SaveStarButton';
+import LogObservationModal from '@/components/star/LogObservationModal';
 
 let cachedStars: FeaturedStar[] | null = null;
 
@@ -92,14 +94,21 @@ export default async function StarDetailPage({ params }: { params: Promise<{ slu
 
       <main className="pt-24 min-h-screen bg-bg">
         <div className="container py-12">
-          {/* Breadcrumb */}
-          <nav className="flex items-center gap-2 mb-8 font-body text-xs text-muted uppercase tracking-widest">
-            <Link href="/" className="hover:text-text-primary transition-colors">Home</Link>
-            <ChevronRight size={14} className="opacity-50" />
-            <Link href="/explore" className="hover:text-text-primary transition-colors">Explore</Link>
-            <ChevronRight size={14} className="opacity-50" />
-            <span className="text-text-primary font-medium">{star.commonName}</span>
-          </nav>
+          {/* Breadcrumb & Actions */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+            <nav className="flex items-center gap-2 font-body text-xs text-muted uppercase tracking-widest">
+              <Link href="/" className="hover:text-text-primary transition-colors">Home</Link>
+              <ChevronRight size={14} className="opacity-50" />
+              <Link href="/explore" className="hover:text-text-primary transition-colors">Explore</Link>
+              <ChevronRight size={14} className="opacity-50" />
+              <span className="text-text-primary font-medium">{star.commonName}</span>
+            </nav>
+            
+            <div className="flex items-center gap-3">
+              <LogObservationModal slug={slug} name={star.commonName} type={star.type || 'Star'} />
+              <SaveStarButton slug={slug} name={star.commonName} type={star.type || 'Star'} />
+            </div>
+          </div>
 
           {/* Two-column layout */}
           <div className="grid grid-cols-1 lg:grid-cols-[55%_1fr] gap-10 items-start">

@@ -5,6 +5,8 @@ import BlackHoleVideo from '@/components/blackhole/BlackHoleVideo';
 import Navbar from '@/components/layout/Navbar';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import SaveStarButton from '@/components/star/SaveStarButton';
+import LogObservationModal from '@/components/star/LogObservationModal';
 
 interface BlackHole {
   id: string;
@@ -64,8 +66,8 @@ export default async function BlackHoleDetailPage({ params }: { params: Promise<
         {/* Top spacer for navbar */}
         <div className="h-24"></div>
 
-        {/* Back Button */}
-        <div className="mb-8">
+        {/* Top actions */}
+        <div className="mb-8 flex items-center justify-between">
           <Link 
             href="/blackholes" 
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full liquid-glass text-muted hover:text-text-primary transition-colors text-sm font-body w-max"
@@ -73,6 +75,10 @@ export default async function BlackHoleDetailPage({ params }: { params: Promise<
             <ArrowLeft size={16} />
             <span>Back to Explorer</span>
           </Link>
+          <div className="liquid-glass rounded-full p-1 border border-white/10 flex items-center gap-2">
+            <LogObservationModal slug={blackhole.slug} name={blackhole.name} type="Black Hole" />
+            <SaveStarButton slug={blackhole.slug} name={blackhole.name} type="Black Hole" />
+          </div>
         </div>
 
         <div className="max-w-3xl mt-auto pb-12">

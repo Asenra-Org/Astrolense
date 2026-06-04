@@ -3,6 +3,8 @@ import { Instrument_Serif, Inter } from 'next/font/google';
 import './globals.css';
 import Providers from './providers';
 import Script from 'next/script';
+import CookieBanner from '@/components/layout/CookieBanner';
+import PwaPrompt from '@/components/pwa/PwaPrompt';
 
 const instrumentSerif = Instrument_Serif({
   subsets: ['latin'],
@@ -68,6 +70,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="font-body bg-bg text-text-primary">
         <Providers>{children}</Providers>
         <AIChatBot />
+        <CookieBanner />
+        <PwaPrompt />
 
         {/* Google Analytics */}
         {gaId && (
