@@ -72,6 +72,9 @@ export default function StarViewer3D({ spectralClass, starType, name = '', fullS
     let glowColor = 0xFFA500;
     let isEarth = false;
     let isSaturn = false;
+    let uNoiseScale = 2.0;
+    let uSpeed = 0.15;
+    let uTurbulence = 0.5;
 
     if (isPlanet) {
       if (planetName.includes('mars')) { coreColor = 0xC1440E; glowColor = 0x8B3A3A; }
@@ -87,14 +90,14 @@ export default function StarViewer3D({ spectralClass, starType, name = '', fullS
       else { coreColor = 0x999999; glowColor = 0x333333; }
     } else {
       switch (cls) {
-        case 'O': coreColor = 0x9BB0FF; glowColor = 0x6496FF; break;
-        case 'B': coreColor = 0xAABFFF; glowColor = 0x78AAFF; break;
-        case 'A': coreColor = 0xFFFFFF; glowColor = 0xFFFFFF; break;
-        case 'F': coreColor = 0xFFF4EA; glowColor = 0xFFF0C8; break;
-        case 'G': coreColor = 0xFFD700; glowColor = 0xFFA500; break;
-        case 'K': coreColor = 0xFF8C42; glowColor = 0xFF6432; break;
-        case 'M': coreColor = 0xFF4500; glowColor = 0xFF0000; break;
-        default: coreColor = 0xFFD700; glowColor = 0xFFA500; break;
+        case 'O': coreColor = 0x9BB0FF; glowColor = 0x6496FF; uNoiseScale = 5.0; uSpeed = 0.4; uTurbulence = 0.8; break;
+        case 'B': coreColor = 0xAABFFF; glowColor = 0x78AAFF; uNoiseScale = 4.0; uSpeed = 0.3; uTurbulence = 0.7; break;
+        case 'A': coreColor = 0xFFFFFF; glowColor = 0xFFFFFF; uNoiseScale = 3.0; uSpeed = 0.2; uTurbulence = 0.6; break;
+        case 'F': coreColor = 0xFFF4EA; glowColor = 0xFFF0C8; uNoiseScale = 2.5; uSpeed = 0.15; uTurbulence = 0.5; break;
+        case 'G': coreColor = 0xFFD700; glowColor = 0xFFA500; uNoiseScale = 2.0; uSpeed = 0.1; uTurbulence = 0.4; break;
+        case 'K': coreColor = 0xFF8C42; glowColor = 0xFF6432; uNoiseScale = 1.5; uSpeed = 0.08; uTurbulence = 0.3; break;
+        case 'M': coreColor = 0xFF4500; glowColor = 0xFF0000; uNoiseScale = 1.0; uSpeed = 0.05; uTurbulence = 0.2; break;
+        default: coreColor = 0xFFD700; glowColor = 0xFFA500; uNoiseScale = 2.0; uSpeed = 0.1; uTurbulence = 0.4; break;
       }
     }
 
@@ -140,58 +143,127 @@ export default function StarViewer3D({ spectralClass, starType, name = '', fullS
     const fragmentShader = `
       uniform float uTime;
       uniform vec3 uColor;
+      uniform float uNoiseScale;
+      uniform float uSpeed;
+      uniform float uTurbulence;
       varying vec3 vNormal;
       varying vec3 vPosition;
 
-      float hash(vec3 p) {
-        p = fract(p * 0.3183099 + .1);
-        p *= 17.0;
-        return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+      // Ashima 3D Noise
+      vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+      vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+      vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+      vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+
+      float snoise(vec3 v) {
+        const vec2  C = vec2(1.0/6.0, 1.0/3.0) ;
+        const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);
+
+        vec3 i  = floor(v + dot(v, C.yyy) );
+        vec3 x0 = v - i + dot(i, C.xxx) ;
+
+        vec3 g = step(x0.yzx, x0.xyz);
+        vec3 l = 1.0 - g;
+        vec3 i1 = min( g.xyz, l.zxy );
+        vec3 i2 = max( g.xyz, l.zxy );
+
+        vec3 x1 = x0 - i1 + C.xxx;
+        vec3 x2 = x0 - i2 + C.yyy;
+        vec3 x3 = x0 - D.yyy;
+
+        i = mod289(i);
+        vec4 p = permute( permute( permute(
+                   i.z + vec4(0.0, i1.z, i2.z, 1.0 ))
+                 + i.y + vec4(0.0, i1.y, i2.y, 1.0 ))
+                 + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));
+
+        float n_ = 0.142857142857; // 1.0/7.0
+        vec3  ns = n_ * D.wyz - D.xzx;
+
+        vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+
+        vec4 x_ = floor(j * ns.z);
+        vec4 y_ = floor(j - 7.0 * x_ );
+
+        vec4 x = x_ *ns.x + ns.yyyy;
+        vec4 y = y_ *ns.x + ns.yyyy;
+        vec4 h = 1.0 - abs(x) - abs(y);
+
+        vec4 b0 = vec4( x.xy, y.xy );
+        vec4 b1 = vec4( x.zw, y.zw );
+
+        vec4 s0 = floor(b0)*2.0 + 1.0;
+        vec4 s1 = floor(b1)*2.0 + 1.0;
+        vec4 sh = -step(h, vec4(0.0));
+
+        vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ;
+        vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;
+
+        vec3 p0 = vec3(a0.xy,h.x);
+        vec3 p1 = vec3(a0.zw,h.y);
+        vec3 p2 = vec3(a1.xy,h.z);
+        vec3 p3 = vec3(a1.zw,h.w);
+
+        vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
+        p0 *= norm.x;
+        p1 *= norm.y;
+        p2 *= norm.z;
+        p3 *= norm.w;
+
+        vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+        m = m * m;
+        return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3) ) );
       }
-      float noise(vec3 x) {
-        vec3 i = floor(x);
-        vec3 f = fract(x);
-        f = f * f * (3.0 - 2.0 * f);
-        return mix(
-            mix(mix(hash(i + vec3(0,0,0)), hash(i + vec3(1,0,0)), f.x),
-                mix(hash(i + vec3(0,1,0)), hash(i + vec3(1,1,0)), f.x), f.y),
-            mix(mix(hash(i + vec3(0,0,1)), hash(i + vec3(1,0,1)), f.x),
-                mix(hash(i + vec3(0,1,1)), hash(i + vec3(1,1,1)), f.x), f.y), f.z
-        );
-      }
+
       float fbm(vec3 p) {
         float f = 0.0;
-        f += 0.5000 * noise(p); p = p * 2.02;
-        f += 0.2500 * noise(p); p = p * 2.03;
-        f += 0.1250 * noise(p); p = p * 2.01;
-        f += 0.0625 * noise(p);
+        float amp = 0.5;
+        for(int i=0; i<4; i++){
+          f += amp * snoise(p);
+          p *= 2.0;
+          amp *= 0.5;
+        }
         return f;
       }
 
       void main() {
-        vec3 p = vPosition * 2.5 + vec3(0.0, uTime * 0.15, uTime * 0.1);
-        float n1 = fbm(p);
-        float n2 = fbm(p * 2.0 - vec3(uTime * 0.2));
+        vec3 p = vPosition * uNoiseScale + vec3(0.0, uTime * uSpeed, uTime * (uSpeed * 0.8));
         
-        float n = mix(n1, n2, 0.5);
+        // Smooth rolling noise instead of sharp cellular cracks
+        float n = fbm(p);
         
-        float spots = smoothstep(0.4, 0.8, fbm(vPosition * 1.5 + vec3(uTime * 0.05)));
+        // Add turbulence for more active stars
+        if (uTurbulence > 0.0) {
+            n += snoise(p * 2.0 - vec3(uTime * uSpeed * 2.0)) * uTurbulence * 0.5;
+        }
+
+        // Remap to 0-1 range
+        n = n * 0.5 + 0.5;
+
+        // Spots are darker, smoother areas
+        float spots = smoothstep(0.4, 0.8, fbm(vPosition * (uNoiseScale * 0.5) + vec3(uTime * (uSpeed * 0.2))));
         
         vec3 baseColor = uColor;
-        vec3 hotColor = min(uColor * 3.0 + vec3(0.3), vec3(1.0)); // Overbright for bloom
-        vec3 darkColor = uColor * 0.15; 
+        vec3 hotColor = min(uColor * 2.5 + vec3(0.5), vec3(1.0));
+        vec3 darkColor = uColor * 0.15;
         
-        vec3 color = mix(baseColor, hotColor, smoothstep(0.3, 0.8, n));
-        color = mix(color, darkColor, spots * 0.8);
+        // Soft mix for boiling plasma
+        vec3 color = mix(darkColor, hotColor, smoothstep(0.2, 0.8, n));
         
-        // Dynamic flares on the surface
-        float flares = fbm(vPosition * 5.0 - vec3(uTime * 0.3));
-        color += hotColor * smoothstep(0.7, 1.0, flares) * 1.5;
+        // Apply dark spots
+        color = mix(color, darkColor * 0.3, spots * 0.8);
+        
+        // Large scale waves
+        float waves = snoise(vPosition * 1.5 - vec3(uTime * uSpeed * 0.5));
+        color += hotColor * smoothstep(0.2, 1.0, waves) * 0.4;
 
-        // Limb darkening (edges get darker, center gets brighter)
         vec3 viewDir = normalize(cameraPosition - vPosition);
         float intensity = max(dot(vNormal, viewDir), 0.0);
-        color *= mix(0.4, 1.5, pow(intensity, 0.6));
+        
+        // Limb darkening/brightening
+        float rim = pow(1.0 - intensity, 3.0);
+        color += hotColor * rim * 0.5; 
+        color *= mix(0.6, 1.2, pow(intensity, 0.6));
         
         gl_FragColor = vec4(color, 1.0);
       }
@@ -208,13 +280,91 @@ export default function StarViewer3D({ spectralClass, starType, name = '', fullS
     `;
 
     const coronaFragmentShader = `
+      uniform float uTime;
       uniform vec3 uColor;
+      uniform float uSpeed;
       varying vec3 vNormal;
       varying vec3 vPosition;
+
+      // Ashima 3D Noise (reused for corona)
+      vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+      vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+      vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+      vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+
+      float snoise(vec3 v) {
+        const vec2  C = vec2(1.0/6.0, 1.0/3.0) ;
+        const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);
+        vec3 i  = floor(v + dot(v, C.yyy) );
+        vec3 x0 = v - i + dot(i, C.xxx) ;
+        vec3 g = step(x0.yzx, x0.xyz);
+        vec3 l = 1.0 - g;
+        vec3 i1 = min( g.xyz, l.zxy );
+        vec3 i2 = max( g.xyz, l.zxy );
+        vec3 x1 = x0 - i1 + C.xxx;
+        vec3 x2 = x0 - i2 + C.yyy;
+        vec3 x3 = x0 - D.yyy;
+        i = mod289(i);
+        vec4 p = permute( permute( permute( i.z + vec4(0.0, i1.z, i2.z, 1.0 )) + i.y + vec4(0.0, i1.y, i2.y, 1.0 )) + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));
+        float n_ = 0.142857142857;
+        vec3  ns = n_ * D.wyz - D.xzx;
+        vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+        vec4 x_ = floor(j * ns.z);
+        vec4 y_ = floor(j - 7.0 * x_ );
+        vec4 x = x_ *ns.x + ns.yyyy;
+        vec4 y = y_ *ns.x + ns.yyyy;
+        vec4 h = 1.0 - abs(x) - abs(y);
+        vec4 b0 = vec4( x.xy, y.xy );
+        vec4 b1 = vec4( x.zw, y.zw );
+        vec4 s0 = floor(b0)*2.0 + 1.0;
+        vec4 s1 = floor(b1)*2.0 + 1.0;
+        vec4 sh = -step(h, vec4(0.0));
+        vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ;
+        vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;
+        vec3 p0 = vec3(a0.xy,h.x);
+        vec3 p1 = vec3(a0.zw,h.y);
+        vec3 p2 = vec3(a1.xy,h.z);
+        vec3 p3 = vec3(a1.zw,h.w);
+        vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
+        p0 *= norm.x;
+        p1 *= norm.y;
+        p2 *= norm.z;
+        p3 *= norm.w;
+        vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+        m = m * m;
+        return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3) ) );
+      }
+
+      float fbm(vec3 p) {
+        float f = 0.0;
+        float amp = 0.5;
+        for(int i=0; i<3; i++){
+          f += amp * snoise(p);
+          p *= 2.0;
+          amp *= 0.5;
+        }
+        return f;
+      }
+
       void main() {
         vec3 viewDir = normalize(cameraPosition - vPosition);
-        float intensity = pow(0.7 - max(dot(vNormal, viewDir), 0.0), 3.0);
-        gl_FragColor = vec4(uColor, 1.0) * intensity * 2.0;
+        float intensity = max(dot(vNormal, viewDir), 0.0);
+        
+        // Soft glowing falloff towards the edge (so it doesn't look like a hard ring)
+        // fade out completely near the extreme edge of the sphere (intensity < 0.1)
+        float edgeFade = smoothstep(0.0, 0.2, intensity);
+        
+        // Intense closer to the center, softer outwards
+        float rim = pow(1.0 - intensity, 2.5) * edgeFade;
+        
+        // Solar flares
+        vec3 p = vPosition * 3.0 - vec3(0.0, uTime * uSpeed * 2.0, 0.0);
+        float flares = fbm(p);
+        flares = pow(flares * 0.5 + 0.5, 3.0) * 1.5;
+        
+        float alpha = rim * 0.5 + flares * rim * 0.6;
+        
+        gl_FragColor = vec4(uColor * 1.5, alpha);
       }
     `;
 
@@ -376,11 +526,20 @@ export default function StarViewer3D({ spectralClass, starType, name = '', fullS
       }
     `;
 
-    // Uniforms object so we can update time
     const uniforms = {
       uTime: { value: 0 },
-      uColor: { value: new THREE.Color(coreColor) }
+      uColor: { value: new THREE.Color(coreColor) },
+      uNoiseScale: { value: 2.0 },
+      uSpeed: { value: 0.15 },
+      uTurbulence: { value: 0.5 }
     };
+
+    if (!isPlanet) {
+      // Set the dynamic star uniforms
+      uniforms.uNoiseScale.value = uNoiseScale;
+      uniforms.uSpeed.value = uSpeed;
+      uniforms.uTurbulence.value = uTurbulence;
+    }
 
     let material;
     if (isPlanet) {
@@ -420,7 +579,21 @@ export default function StarViewer3D({ spectralClass, starType, name = '', fullS
     const sphere = new THREE.Mesh(geometry, material);
     scene.add(sphere);
 
-    // Removed the corona layer as requested
+    let coronaMesh: THREE.Mesh | null = null;
+    if (!isPlanet) {
+      const coronaGeo = new THREE.SphereGeometry(1.65, 64, 64);
+      const coronaMat = new THREE.ShaderMaterial({
+        vertexShader: coronaVertexShader,
+        fragmentShader: coronaFragmentShader,
+        uniforms: uniforms,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        side: THREE.BackSide
+      });
+      coronaMesh = new THREE.Mesh(coronaGeo, coronaMat);
+      scene.add(coronaMesh);
+    }
 
     // Saturn rings
     if (isSaturn) {
@@ -498,7 +671,10 @@ export default function StarViewer3D({ spectralClass, starType, name = '', fullS
       if (isPlanet) {
         sphere.rotation.y += delta * 0.2;
       } else {
-        sphere.rotation.y += delta * 0.05; // slower spin for star
+        sphere.rotation.y += delta * 0.05;
+        if (coronaMesh) {
+          coronaMesh.rotation.y += delta * 0.08;
+        }
       }
       
       controls.update();
