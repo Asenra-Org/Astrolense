@@ -65,12 +65,11 @@ export default function StarViewer3D({ spectralClass, starType, name = '', fullS
 
     // Determine colors
     const isPlanet = starType === 'Planet' || starType === 'Dwarf Planet';
-    const cls = spectralClass ? spectralClass[0].toUpperCase() : 'G';
     const planetName = name.toLowerCase();
+    const cls = spectralClass ? spectralClass[0].toUpperCase() : 'G';
 
     let coreColor = 0xFFD700;
     let glowColor = 0xFFA500;
-    let isEarth = false;
     let isSaturn = false;
     let uNoiseScale = 2.0;
     let uSpeed = 0.15;
@@ -79,7 +78,7 @@ export default function StarViewer3D({ spectralClass, starType, name = '', fullS
     if (isPlanet) {
       if (planetName.includes('mars')) { coreColor = 0xC1440E; glowColor = 0x8B3A3A; }
       else if (planetName.includes('jupiter')) { coreColor = 0xd39c7e; glowColor = 0xe0c9a6; }
-      else if (planetName.includes('earth')) { coreColor = 0x1E90FF; glowColor = 0x228B22; isEarth = true; }
+      else if (planetName.includes('earth')) { coreColor = 0x1E90FF; glowColor = 0x228B22; }
       else if (planetName.includes('mercury')) { coreColor = 0xaaaaaa; glowColor = 0x888888; }
       else if (planetName.includes('venus')) { coreColor = 0xe3bb76; glowColor = 0xc9a05b; }
       else if (planetName.includes('moon')) { coreColor = 0x999999; glowColor = 0x555555; }

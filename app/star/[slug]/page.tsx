@@ -30,6 +30,24 @@ async function getAllStars(): Promise<FeaturedStar[]> {
 }
 
 async function getStarBySlug(slug: string): Promise<FeaturedStar | null> {
+  if (slug === 'karan-patil') {
+    return {
+      id: 999999,
+      slug: 'karan-patil',
+      commonName: 'Karan Patil',
+      type: 'Founder-Class Engineer',
+      spectralClass: 'O',
+      distanceLy: 0.0000001,
+      description: "The ultimate Founder-Class entity at the absolute center of the Asenra universe. Its gravitational pull effortlessly attracts all the attention in the room, radiating an aura of intense, visionary self-obsession. This 'Super Star' operates under the strict belief that the entire digital cosmos revolves exclusively around it. Approach with caution: ego density is critically high, and it may spontaneously collapse into a black hole if someone mentions a competitor.",
+      tempK: 9999999,
+      massSuns: 1000000,
+      radiusSuns: 1000000,
+      bayerDesignation: 'Founder',
+      constellation: 'Asenra',
+      ra: 100,
+      dec: 100
+    } as unknown as FeaturedStar;
+  }
   const stars = await getAllStars();
   return stars.find(s => s.slug === slug) ?? null;
 }
@@ -217,13 +235,17 @@ export default async function StarDetailPage({ params }: { params: Promise<{ slu
                   starName={star.commonName} 
                 />
               </div>
-              <VisibilityChecker ra={star.ra} dec={star.dec} starName={star.commonName} />
+              {slug !== 'karan-patil' && (
+                <VisibilityChecker ra={star.ra} dec={star.dec} starName={star.commonName} />
+              )}
             </div>
 
             {/* Right: Info Panel */}
             <div className="space-y-6">
               <StarInfoPanel star={star} />
-              <SimilarStars stars={similarStars} spectralClass={star.spectralClass} type={star.type} />
+              {slug !== 'karan-patil' && (
+                <SimilarStars stars={similarStars} spectralClass={star.spectralClass} type={star.type} />
+              )}
             </div>
           </div>
         </div>

@@ -21,6 +21,23 @@ interface StarViewerWrapperProps {
 }
 
 export default function StarViewerWrapper({ spectralClass, starType, starName, fullScreen = false }: StarViewerWrapperProps) {
+  const isKaran = starName.toLowerCase() === 'karan patil';
+  
+  if (isKaran) {
+    return (
+      <div className={`w-full ${fullScreen ? 'h-full' : 'h-[400px] md:h-[600px]'} overflow-hidden relative group flex items-center justify-center bg-black/50`}>
+        <img 
+          src="/karan_patil.WEBP" 
+          alt="Karan Patil" 
+          className="max-w-[80%] max-h-[80%] object-contain rounded-3xl shadow-[0_0_100px_rgba(255,255,255,0.2)] animate-pulse"
+        />
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-md border border-white/10 text-white/90 text-sm px-4 py-2 rounded-full pointer-events-none shadow-lg z-20 flex items-center gap-2">
+          <span>Staring at perfection</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`w-full ${fullScreen ? 'h-full' : 'h-[400px] md:h-[600px]'} overflow-hidden relative group`}>
       <StarViewer3D 
