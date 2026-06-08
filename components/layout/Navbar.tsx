@@ -83,10 +83,9 @@ export default function Navbar() {
             scrolled && "shadow-md shadow-black/40"
           )}
         >
-          {/* Logo */}
-          <Link href="/" className="group shrink-0 flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full accent-gradient p-[1px] transition-transform duration-300 hover:scale-110 ml-1">
-            <div className="w-full h-full bg-bg rounded-full flex items-center justify-center">
-              <span className="font-display italic text-[11px] sm:text-[13px] text-text-primary">AL</span>
+          <Link href="/" className="group shrink-0 flex items-center justify-center h-8 sm:h-9 rounded-full accent-gradient p-[1px] transition-transform duration-300 hover:scale-110 ml-1">
+            <div className="w-full h-full bg-bg rounded-full flex items-center justify-center px-3 sm:px-4">
+              <span className="font-display font-medium text-[11px] sm:text-[13px] text-text-primary">Home</span>
             </div>
           </Link>
 
@@ -151,7 +150,7 @@ export default function Navbar() {
         {/* Right fade indicator with animated bar for mobile scrolling */}
         {isScrollable && scrollProgress < 0.95 && (
           <div className="absolute right-0 top-0 bottom-0 w-16 pointer-events-none flex items-center justify-end pr-2 md:hidden rounded-r-full z-10" style={{ background: 'linear-gradient(to left, rgba(2,2,8,1) 0%, rgba(2,2,8,0) 100%)' }}>
-            <div className="w-[3px] h-6 bg-gradient-to-b from-[#00D4FF] to-[#0055FF] rounded-full animate-pulse shadow-[0_0_8px_rgba(0,212,255,0.8)]" />
+            <div className="w-[3px] h-6 bg-gradient-to-b from-cyan-200 to-cyan-600 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
           </div>
         )}
       </div>
