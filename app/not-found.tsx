@@ -52,28 +52,14 @@ export default function NotFound() {
           fontWeight: 700,
           color: '#F0F0F0',
           letterSpacing: '-0.02em',
-          marginBottom: '12px',
-        }}>
-          Star Not Found
-        </h1>
-
-        <p style={{
-          color: '#8A8A9A',
-          fontFamily: 'DM Sans, sans-serif',
-          fontSize: '1rem',
-          lineHeight: 1.65,
           marginBottom: '32px',
         }}>
-          This star doesn&apos;t exist in our catalog — yet. Search for another star or browse
-          all 200,000+ stars in our Explore section.
-        </p>
+          Page Not Found
+        </h1>
 
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
           <Link href="/" className="btn-primary">
             Go Home
-          </Link>
-          <Link href="/explore" className="btn-ghost">
-            Explore Stars
           </Link>
         </div>
       </div>

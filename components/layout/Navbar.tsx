@@ -66,11 +66,10 @@ export default function Navbar() {
   };
 
   const navLinks = [
-    { name: 'Home', href: '/' },
     { name: 'Explore', href: '/explore' },
-    { name: 'Solar System', href: '/star/solar-system' },
+    { name: 'Upcoming', href: '/upcoming-events' },
     { name: 'Black Holes', href: '/blackholes' },
-    { name: 'Blog', href: '/blog' },
+    { name: 'Solar System', href: '/star/solar-system' },
   ];
 
   return (
@@ -149,16 +148,10 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Scroll Indicator (Visible on Mobile when Scrollable) */}
-        {isScrollable && (
-          <div className="md:hidden mt-2 w-12 h-1 bg-white/10 rounded-full overflow-hidden transition-opacity duration-300">
-            <div 
-              className="h-full bg-accent-gradient rounded-full transition-transform duration-75 ease-out" 
-              style={{ 
-                width: '40%', 
-                transform: `translateX(${scrollProgress * 150}%)` 
-              }} 
-            />
+        {/* Right fade indicator with animated bar for mobile scrolling */}
+        {isScrollable && scrollProgress < 0.95 && (
+          <div className="absolute right-0 top-0 bottom-0 w-16 pointer-events-none flex items-center justify-end pr-2 md:hidden rounded-r-full z-10" style={{ background: 'linear-gradient(to left, rgba(2,2,8,1) 0%, rgba(2,2,8,0) 100%)' }}>
+            <div className="w-[3px] h-6 bg-gradient-to-b from-[#00D4FF] to-[#0055FF] rounded-full animate-pulse shadow-[0_0_8px_rgba(0,212,255,0.8)]" />
           </div>
         )}
       </div>

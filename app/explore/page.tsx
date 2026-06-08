@@ -29,8 +29,7 @@ export default function ExplorePage() {
   const [spectralFilter, setSpectralFilter] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState('brightest');
   const [page, setPage] = useState(1);
-  const loaderRef = useRef<HTMLDivElement>(null);
-  const PAGE_SIZE = 20;
+  const PAGE_SIZE = 50;
 
   useEffect(() => {
     fetch('/data/stars-massive.json')
@@ -53,24 +52,13 @@ export default function ExplorePage() {
     setDisplayed(result.slice(0, PAGE_SIZE));
   }, [stars, constellation, spectralFilter, sortBy]);
 
-  // Infinite scroll
-  useEffect(() => {
-    if (!loaderRef.current) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setPage(p => {
-            const next = p + 1;
-            setDisplayed(filtered.slice(0, next * PAGE_SIZE));
-            return next;
-          });
-        }
-      },
-      { threshold: 0.1 }
-    );
-    observer.observe(loaderRef.current);
-    return () => observer.disconnect();
-  }, [filtered]);
+  const loadMore = () => {
+    setPage(p => {
+      const next = p + 1;
+      setDisplayed(filtered.slice(0, next * PAGE_SIZE));
+      return next;
+    });
+  };
 
   const toggleSpectral = (cls: string) => {
     setSpectralFilter(prev =>
@@ -225,12 +213,17 @@ export default function ExplorePage() {
             ))}
           </motion.div>
 
-          {/* Infinite scroll loader */}
-          <div ref={loaderRef} className="h-10 flex items-center justify-center mt-10">
-            {displayed.length < filtered.length && (
-              <div className="w-6 h-6 border-2 border-stroke border-t-accent rounded-full animate-spin" />
-            )}
-          </div>
+          {/* Load More Button */}
+          {displayed.length < filtered.length && (
+            <div className="flex justify-center mt-12 mb-8">
+              <button 
+                onClick={loadMore}
+                className="liquid-glass px-8 py-3 rounded-full font-body font-medium text-text-primary hover:bg-white/10 transition-colors duration-300 border border-white/10"
+              >
+                Load More
+              </button>
+            </div>
+          )}
 
           {filtered.length === 0 && (
             <div className="text-center py-20 text-muted font-body">

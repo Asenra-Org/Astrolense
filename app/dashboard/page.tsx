@@ -12,6 +12,8 @@ import Link from 'next/link';
 import { Bookmark, Telescope, Star, Calendar, Trash2, Microscope } from 'lucide-react';
 import type { SavedStar } from '@/types/user';
 import type { Observation } from '@/types/observation';
+import { SpaceEvent } from '@/types/event';
+import { getSavedEvents } from '@/lib/events';
 import { getSpectralBadgeClass } from '@/lib/utils';
 import { motion } from 'framer-motion';
 
@@ -19,6 +21,7 @@ export default function DashboardPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [savedStars, setSavedStars] = useState<SavedStar[]>([]);
+  const [savedEvents, setSavedEvents] = useState<SpaceEvent[]>([]);
   const [observations, setObservations] = useState<Observation[]>([]);
   const [userDoc, setUserDoc] = useState<any>(null);
   const [dataLoading, setDataLoading] = useState(true);
@@ -33,9 +36,10 @@ export default function DashboardPage() {
     if (!user) return;
 
     // Fetch data
-    Promise.all([getSavedStars(user.uid), getUserDoc(user.uid)]).then(([stars, doc]) => {
+    Promise.all([getSavedStars(user.uid), getUserDoc(user.uid), getSavedEvents(user.uid)]).then(([stars, doc, events]) => {
       setSavedStars(stars);
       setUserDoc(doc);
+      setSavedEvents(events);
       setDataLoading(false);
     });
 
@@ -65,8 +69,8 @@ export default function DashboardPage() {
   const stats = [
     { icon: <Star size={20} className="text-accent" />, value: userDoc?.starsExplored ?? 0, label: 'Stars Explored' },
     { icon: <Bookmark size={20} className="text-[#89AACC]" />, value: savedStars.length, label: 'Stars Saved' },
+    { icon: <Calendar size={20} className="text-[#FFB067]" />, value: savedEvents.length, label: 'Events Saved' },
     { icon: <Telescope size={20} className="text-[#4E85BF]" />, value: observations.length, label: 'Observations' },
-    { icon: <Calendar size={20} className="text-muted" />, value: userDoc?.createdAt ? new Date(userDoc.createdAt.seconds * 1000).getFullYear() : '—', label: 'Member Since' },
   ];
 
   return (
@@ -162,6 +166,55 @@ export default function DashboardPage() {
               )}
             </motion.div>
 
+            {/* Saved Events */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="font-display text-2xl text-text-primary">
+                  Saved Events
+                </h2>
+                <Link href="/upcoming-events" className="text-accent text-sm font-body hover:text-white transition-colors">
+                  View timeline →
+                </Link>
+              </div>
+
+              {savedEvents.length === 0 ? (
+                <div className="liquid-glass rounded-2xl p-10 text-center">
+                  <div className="text-4xl mb-4 opacity-50 flex justify-center"><Calendar size={40} className="text-accent/50" /></div>
+                  <p className="text-muted font-body text-sm mb-6">
+                    No saved events yet. Check out the timeline!
+                  </p>
+                  <Link href="/upcoming-events" className="inline-flex items-center justify-center px-6 py-2.5 bg-white/5 border border-stroke/50 rounded-full text-sm font-body text-text-primary hover:bg-white/10 transition-colors">
+                    Events Timeline
+                  </Link>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                  {savedEvents.map((event) => (
+                    <div key={event.id} className="liquid-glass rounded-xl p-4 flex flex-col group relative">
+                      <div className="flex justify-between items-start mb-2">
+                        <p className="font-display text-lg text-text-primary group-hover:text-accent transition-colors">
+                          {event.title}
+                        </p>
+                        <span className="px-2 py-0.5 bg-white/10 text-[10px] text-text-secondary uppercase tracking-widest rounded-md">
+                          {event.type.replace('_', ' ')}
+                        </span>
+                      </div>
+                      <div className="text-sm text-muted font-body flex items-center gap-2">
+                        <Calendar size={14} />
+                        {new Date(event.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-8 md:gap-12 mt-12 items-start">
             {/* Observation Log */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
