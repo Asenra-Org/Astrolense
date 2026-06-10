@@ -74,7 +74,8 @@ export function formatLuminosity(lum: number): string {
   return `${lum.toFixed(2)} L☉`;
 }
 
-export function raToHMS(ra: number): string {
+export function raToHMS(ra: number | undefined): string {
+  if (ra === undefined || ra === null || isNaN(ra)) return 'N/A';
   const hours = Math.floor(ra);
   const minFrac = (ra - hours) * 60;
   const minutes = Math.floor(minFrac);
@@ -82,7 +83,8 @@ export function raToHMS(ra: number): string {
   return `${hours}h ${minutes}m ${seconds}s`;
 }
 
-export function decToDMS(dec: number): string {
+export function decToDMS(dec: number | undefined): string {
+  if (dec === undefined || dec === null || isNaN(dec)) return 'N/A';
   const sign = dec < 0 ? '-' : '+';
   const abs = Math.abs(dec);
   const degrees = Math.floor(abs);

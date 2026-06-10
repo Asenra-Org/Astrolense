@@ -57,7 +57,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const star = await getStarBySlug(slug);
   if (!star) return { title: 'Star Not Found' };
 
-  const typeName = star.type === 'Planet' ? 'Planet' : 'Star';
+  const typeName = star.type === 'Planet' ? 'Planet' : star.type === 'Moon' ? 'Moon' : star.type === 'Dwarf Planet' ? 'Dwarf Planet' : 'Star';
   const constellationStr = star.constellation ? `Part of ${star.constellation} constellation.` : '';
   const spectralStr = star.spectralClass ? `Spectral class ${star.spectralClass}. ` : '';
   const tempStr = star.tempK ? `Surface temperature: ${star.tempK.toLocaleString()} K.` : '';
@@ -85,8 +85,10 @@ export default async function StarDetailPage({ params }: { params: Promise<{ slu
   const cls = star.spectralClass?.[0]?.toUpperCase() ?? 'G';
   
   let similarStars = [];
-  if (star.type === 'Planet') {
-    similarStars = allStars.filter(s => s.type === 'Planet' && s.slug !== star.slug).slice(0, 4);
+  if (star.type === 'Planet' || star.type === 'Moon' || star.type === 'Dwarf Planet') {
+    similarStars = allStars.filter(s => 
+      (s.type === 'Planet' || s.type === 'Moon' || s.type === 'Dwarf Planet') && s.slug !== star.slug
+    ).slice(0, 4);
   } else {
     similarStars = allStars
       .filter(s => s.type === 'Star' && s.spectralClass?.[0]?.toUpperCase() === cls && s.slug !== star.slug)

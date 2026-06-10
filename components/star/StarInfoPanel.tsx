@@ -66,6 +66,14 @@ export default function StarInfoPanel({ star }: StarInfoPanelProps) {
             <span className="px-3 py-1 rounded-full bg-[#88aacc]/10 border border-[#88aacc]/30 text-accent font-body text-xs font-medium scale-90 origin-left">
               Planet
             </span>
+          ) : star.type === 'Moon' ? (
+            <span className="px-3 py-1 rounded-full bg-white/10 border border-white/20 text-white/70 font-body text-xs font-medium scale-90 origin-left">
+              Moon
+            </span>
+          ) : star.type === 'Dwarf Planet' ? (
+            <span className="px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-300 font-body text-xs font-medium scale-90 origin-left">
+              Dwarf Planet
+            </span>
           ) : null}
           {star.isVariable && (
             <span className="px-3 py-1 rounded-full bg-accent/10 border border-accent/30 text-accent font-body text-xs font-medium">

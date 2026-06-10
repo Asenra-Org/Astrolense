@@ -15,7 +15,7 @@ export default function SimilarStars({ stars, spectralClass, type }: SimilarStar
   return (
     <div className="mt-12">
       <h3 className="font-display text-2xl text-text-primary mb-6 flex items-center gap-3">
-        Similar {type === 'Planet' ? 'Planets' : 'Stars'}
+        Similar {type === 'Planet' || type === 'Moon' || type === 'Dwarf Planet' ? 'Solar Objects' : 'Stars'}
         {spectralClass ? (
           <span className={`badge-spectral badge-spectral-${spectralToClass(spectralClass)} scale-75 origin-left`}>
             {spectralClass[0]} type
@@ -40,7 +40,7 @@ export default function SimilarStars({ stars, spectralClass, type }: SimilarStar
               <ArrowUpRight size={16} className="text-muted group-hover:text-accent transition-colors opacity-0 -translate-y-1 translate-x-1 group-hover:opacity-100 group-hover:translate-y-0 group-hover:translate-x-0" />
             </div>
             <p className="text-xs text-muted font-body mb-4 uppercase tracking-widest">
-              {star.type === 'Planet' ? 'Planet' : star.constellation || 'Unknown'}
+              {star.type === 'Planet' || star.type === 'Moon' || star.type === 'Dwarf Planet' ? star.type : star.constellation || 'Unknown'}
             </p>
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted font-body">
