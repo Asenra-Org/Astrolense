@@ -97,7 +97,7 @@ export default function StarViewer3D({ spectralClass, starType, name = '', fullS
         coreScale = 1.2; bloomIntensity = 2.5; bloomRadius = 1.5; uSpeed = 0.08; uNoiseScale = 1.1;
       } else if (planetName.includes('sirius')) {
         coreColor = 0xDEE9FF; glowColor = 0x9CBBFF; 
-        coreScale = 1.3; bloomIntensity = 3.0; bloomRadius = 1.8; uSpeed = 0.12; uNoiseScale = 1.3;
+        coreScale = 1.3; bloomIntensity = 1.8; bloomRadius = 1.0; uSpeed = 0.12; uNoiseScale = 1.3;
       } else if (planetName.includes('arcturus')) {
         coreColor = 0xFFBA8A; glowColor = 0xFF7633; 
         coreScale = 2.3; bloomIntensity = 1.5; bloomRadius = 1.0; uSpeed = 0.02; uNoiseScale = 0.4;
@@ -106,13 +106,13 @@ export default function StarViewer3D({ spectralClass, starType, name = '', fullS
         coreScale = 2.8; bloomIntensity = 1.8; bloomRadius = 1.2; uSpeed = 0.015; uNoiseScale = 0.3;
       } else if (planetName.includes('alnitak') || planetName.includes('rigel')) {
         coreColor = 0xC4D8FF; glowColor = 0x6A9EFF;
-        coreScale = 2.0; bloomIntensity = 2.8; bloomRadius = 1.6; uSpeed = 0.15; uNoiseScale = 0.9;
+        coreScale = 2.0; bloomIntensity = 2.0; bloomRadius = 1.0; uSpeed = 0.15; uNoiseScale = 0.9;
       } else {
         // Fallbacks for spectral classes
         switch (cls) {
-          case 'O': coreColor = 0xC4D8FF; glowColor = 0x6A9EFF; uNoiseScale = 1.2; uSpeed = 0.15; bloomIntensity = 2.8; bloomRadius = 1.6; break;
-          case 'B': coreColor = 0xDDEBFF; glowColor = 0x9CBBFF; uNoiseScale = 1.0; uSpeed = 0.12; bloomIntensity = 2.5; bloomRadius = 1.5; break;
-          case 'A': coreColor = 0xF5F8FF; glowColor = 0xCCDEFF; uNoiseScale = 0.9; uSpeed = 0.1; bloomIntensity = 2.0; bloomRadius = 1.2; break;
+          case 'O': coreColor = 0xC4D8FF; glowColor = 0x6A9EFF; uNoiseScale = 1.2; uSpeed = 0.15; bloomIntensity = 2.0; bloomRadius = 1.0; break;
+          case 'B': coreColor = 0xDDEBFF; glowColor = 0x9CBBFF; uNoiseScale = 1.0; uSpeed = 0.12; bloomIntensity = 1.8; bloomRadius = 0.9; break;
+          case 'A': coreColor = 0xF5F8FF; glowColor = 0xCCDEFF; uNoiseScale = 0.9; uSpeed = 0.1; bloomIntensity = 1.6; bloomRadius = 0.8; break;
           case 'F': coreColor = 0xFFFBEA; glowColor = 0xFFEAC8; uNoiseScale = 0.8; uSpeed = 0.08; bloomIntensity = 1.5; bloomRadius = 0.8; break;
           case 'G': coreColor = 0xFFF4D4; glowColor = 0xFFD297; uNoiseScale = 0.7; uSpeed = 0.06; bloomIntensity = 1.2; bloomRadius = 0.6; break;
           case 'K': coreColor = 0xFFD0A1; glowColor = 0xFF9C63; uNoiseScale = 0.6; uSpeed = 0.04; bloomIntensity = 1.1; bloomRadius = 0.7; break;
@@ -353,7 +353,7 @@ export default function StarViewer3D({ spectralClass, starType, name = '', fullS
     // Now heavily reliant on UnrealBloomPass for real light bleeding. This is just an atmospheric haze.
     let glowMesh: THREE.Mesh | null = null;
     if (!isPlanet) {
-      const glowScale = coreScale * 1.25;
+      const glowScale = coreScale * 1.6;
       const glowGeo = new THREE.SphereGeometry(glowScale, 64, 64);
       const glowMat = new THREE.ShaderMaterial({
         vertexShader: `
@@ -373,18 +373,17 @@ export default function StarViewer3D({ spectralClass, starType, name = '', fullS
             vec3 viewDir = normalize(cameraPosition - vPosition);
             float intensity = max(dot(vNormal, viewDir), 0.0);
             
-            // Fades from bright center to transparent edge
-            float alpha = pow(intensity, 2.5);
+            // Strong center opacity to fully mask the core geometry edges
+            float alpha = pow(1.0 - intensity, 1.5) * 0.18;
             
-            // Ultra-low opacity haze (0.05) - let UnrealBloom do the heavy lifting
-            gl_FragColor = vec4(uColor, alpha * 0.05);
+            gl_FragColor = vec4(uColor, alpha);
           }
         `,
         uniforms: uniforms,
         transparent: true,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
-        side: THREE.BackSide // Render inside out so it bleeds around the core
+        side: THREE.FrontSide
       });
       glowMesh = new THREE.Mesh(glowGeo, glowMat);
       scene.add(glowMesh);

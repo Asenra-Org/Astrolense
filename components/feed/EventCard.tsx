@@ -1,29 +1,75 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Heart, Share2, Calendar, Clock, Bookmark } from 'lucide-react';
+import { Heart, Share2, Bookmark, Clock, CalendarDays, Lock } from 'lucide-react';
 import { SpaceEvent } from '@/types/event';
 import { toggleLikeEvent, hasUserLikedEvent, toggleSaveEvent, hasUserSavedEvent } from '@/lib/events';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 
-const getTypeGradient = (type: string) => {
-  switch (type) {
-    case 'meteor_shower': return 'from-accent/20 to-transparent';
-    case 'eclipse': return 'from-[#FFB067]/20 to-transparent';
-    case 'conjunction': return 'from-[#4E85BF]/20 to-transparent';
-    case 'close_approach': return 'from-[#89AACC]/20 to-transparent';
-    default: return 'from-white/10 to-transparent';
-  }
+// Event type config — color, label
+const typeConfig: Record<string, { color: string; glow: string; label: string }> = {
+  meteor_shower: {
+    color: 'text-cyan-300 bg-cyan-400/10 border-cyan-400/20',
+    glow: 'shadow-[0_0_40px_rgba(34,211,238,0.12)]',
+    label: 'Meteor Shower',
+  },
+  eclipse: {
+    color: 'text-amber-300 bg-amber-400/10 border-amber-400/20',
+    glow: 'shadow-[0_0_40px_rgba(251,191,36,0.12)]',
+    label: 'Eclipse',
+  },
+  conjunction: {
+    color: 'text-violet-300 bg-violet-400/10 border-violet-400/20',
+    glow: 'shadow-[0_0_40px_rgba(167,139,250,0.12)]',
+    label: 'Conjunction',
+  },
+  close_approach: {
+    color: 'text-sky-300 bg-sky-400/10 border-sky-400/20',
+    glow: 'shadow-[0_0_40px_rgba(125,211,252,0.12)]',
+    label: 'Close Approach',
+  },
+  other: {
+    color: 'text-white/60 bg-white/5 border-white/10',
+    glow: '',
+    label: 'Space Event',
+  },
 };
+
+function useCountdown(dateStr: string) {
+  const [timeLeft, setTimeLeft] = useState('');
+  const [isPast, setIsPast] = useState(false);
+
+  useEffect(() => {
+    const update = () => {
+      const dist = new Date(dateStr).getTime() - Date.now();
+      if (dist <= 0) {
+        setIsPast(true);
+        setTimeLeft('Live Now');
+        return;
+      }
+      const d = Math.floor(dist / 86400000);
+      const h = Math.floor((dist % 86400000) / 3600000);
+      const m = Math.floor((dist % 3600000) / 60000);
+      const s = Math.floor((dist % 60000) / 1000);
+      setTimeLeft(d > 0 ? `${d}d ${h}h ${m}m` : `${h}h ${m}m ${s}s`);
+    };
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, [dateStr]);
+
+  return { timeLeft, isPast };
+}
 
 export function EventCard({ event }: { event: SpaceEvent }) {
   const { user } = useAuth();
   const [isLiked, setIsLiked] = useState(false);
-  const [likesCount, setLikesCount] = useState(event.likesCount || 0);
+  const [likesCount, setLikesCount] = useState(Math.max(0, event.likesCount || 0));
   const [isSaved, setIsSaved] = useState(false);
-  const [timeLeft, setTimeLeft] = useState('');
+  const { timeLeft, isPast } = useCountdown(event.date);
 
   useEffect(() => {
     if (user) {
@@ -32,174 +78,165 @@ export function EventCard({ event }: { event: SpaceEvent }) {
     }
   }, [user, event.id]);
 
-  // Countdown timer logic
-  useEffect(() => {
-    const eventDate = new Date(event.date).getTime();
-    
-    const updateCountdown = () => {
-      const now = new Date().getTime();
-      const distance = eventDate - now;
-
-      if (distance < 0) {
-        setTimeLeft('Happening Now / Passed');
-        return;
-      }
-
-      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
-      setTimeLeft(`${days}d ${hours}h ${minutes}m ${seconds}s`);
-    };
-
-    updateCountdown();
-    const interval = setInterval(updateCountdown, 1000);
-    return () => clearInterval(interval);
-  }, [event.date]);
+  const requireLogin = (action: string) => {
+    toast.error(`Sign in to ${action}`, {
+      action: { label: 'Sign In', onClick: () => window.location.href = '/auth/login' },
+    });
+  };
 
   const handleLike = async () => {
-    if (!user) {
-      toast.error('Please login to like events!');
-      return;
-    }
-    
-    // Optimistic UI update
-    const newLikedState = !isLiked;
-    setIsLiked(newLikedState);
-    setLikesCount(prev => Math.max(0, newLikedState ? prev + 1 : prev - 1));
-    
+    if (!user) return requireLogin('like events');
+    const next = !isLiked;
+    setIsLiked(next);
+    setLikesCount(p => Math.max(0, next ? p + 1 : p - 1));
     try {
       await toggleLikeEvent(event.id, user.uid);
-    } catch (e) {
-      // Revert on failure
-      setIsLiked(!newLikedState);
-      setLikesCount(prev => Math.max(0, !newLikedState ? prev + 1 : prev - 1));
-      toast.error('Failed to like event');
+    } catch {
+      setIsLiked(!next);
+      setLikesCount(p => Math.max(0, !next ? p + 1 : p - 1));
+      toast.error('Failed to update like');
     }
   };
 
   const handleSave = async () => {
-    if (!user) {
-      toast.error('Please login to save events!');
-      return;
-    }
-    
-    // Optimistic UI update
-    const newSavedState = !isSaved;
-    setIsSaved(newSavedState);
-    
+    if (!user) return requireLogin('save events');
+    const next = !isSaved;
+    setIsSaved(next);
     try {
-      const result = await toggleSaveEvent(event, user.uid);
-      if (result) {
-        toast.success('Event saved to your Space!');
-      } else {
-        toast.info('Event removed from your Space.');
-      }
-    } catch (e) {
-      // Revert on failure
-      setIsSaved(!newSavedState);
+      const saved = await toggleSaveEvent(event, user.uid);
+      toast.success(saved ? 'Saved to your Space!' : 'Removed from Space.');
+    } catch {
+      setIsSaved(!next);
       toast.error('Failed to save event');
     }
   };
 
   const handleShare = () => {
     if (navigator.share) {
-      navigator.share({
-        title: event.title,
-        text: event.description,
-        url: window.location.href,
-      }).catch(console.error);
+      navigator.share({ title: event.title, text: event.description, url: window.location.href }).catch(() => {});
     } else {
-      navigator.clipboard.writeText(`${event.title} - ${window.location.href}`);
-      toast.success('Link copied to clipboard!');
+      navigator.clipboard.writeText(window.location.href);
+      toast.success('Link copied!');
     }
   };
 
-  // Strip emojis from title
-  const cleanTitle = event.title.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F100}-\u{1F1FF}\u{1F200}-\u{1F251}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}]/gu, '').trim();
+  const cleanTitle = event.title.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
+  const cfg = typeConfig[event.type] ?? typeConfig.other;
+  const dateStr = new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 30 }}
+    <motion.article
+      initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-50px" }}
-      transition={{ duration: 0.7, ease: "easeOut" }}
-      className="liquid-glass rounded-[2rem] overflow-hidden mb-12 group"
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.6, ease: 'easeOut' }}
+      className={`relative rounded-2xl overflow-hidden border border-white/8 bg-white/[0.03] backdrop-blur-md ${cfg.glow}`}
     >
-      <div className={`absolute top-0 right-0 w-full md:w-1/2 h-full bg-gradient-to-l ${getTypeGradient(event.type)} pointer-events-none opacity-20 group-hover:opacity-40 transition-opacity duration-700`} />
-      
-      <div className="p-8 md:p-12 relative z-10">
-        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-6 mb-8">
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-            <div>
-              <span className="px-3 py-1 bg-white/5 border border-white/10 text-accent text-[10px] md:text-xs font-semibold rounded-full uppercase tracking-[0.2em] mb-4 inline-block">
-                {event.type.replace('_', ' ')}
-              </span>
-              <h2 className="text-3xl md:text-4xl font-body font-light text-white tracking-tight leading-tight">
-                {cleanTitle}
-              </h2>
-            </div>
+      {/* Top accent line */}
+      <div className={`absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-current to-transparent opacity-40 ${cfg.color.split(' ')[0]}`} />
+
+      <div className="p-5">
+        {/* Header row */}
+        <div className="flex items-start justify-between gap-3 mb-3">
+          {/* Type badge */}
+          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-widest uppercase border ${cfg.color}`}>
+            {cfg.label}
+          </span>
+
+          {/* Save button — blurred lock if not logged in */}
+          {user ? (
+            <button
+              onClick={handleSave}
+              className={`p-2 rounded-full transition-all duration-200 border ${
+                isSaved
+                  ? 'bg-cyan-400/20 border-cyan-400/30 text-cyan-300'
+                  : 'bg-white/5 border-white/10 text-white/40 hover:text-white hover:bg-white/10'
+              }`}
+              aria-label={isSaved ? 'Saved' : 'Save event'}
+            >
+              <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} strokeWidth={1.5} />
+            </button>
+          ) : (
+            <Link
+              href="/auth/login"
+              className="p-2 rounded-full bg-white/5 border border-white/10 text-white/30 hover:text-white/60 transition-colors"
+              title="Sign in to save"
+            >
+              <Lock className="w-4 h-4" strokeWidth={1.5} />
+            </Link>
+          )}
+        </div>
+
+        {/* Title */}
+        <h2 className="font-display text-[1.4rem] leading-tight text-white mb-3 tracking-tight">
+          {cleanTitle}
+        </h2>
+
+        {/* Description — clamped to 3 lines on mobile */}
+        <p className="font-body text-white/50 text-sm leading-relaxed line-clamp-3 mb-5">
+          {event.description}
+        </p>
+
+        {/* Countdown + Date chips */}
+        <div className="flex gap-2 mb-5 flex-wrap">
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-medium ${
+            isPast ? 'bg-emerald-400/10 border-emerald-400/20 text-emerald-300' : 'bg-white/5 border-white/10 text-white/70'
+          }`}>
+            <Clock className="w-3.5 h-3.5 shrink-0" strokeWidth={1.5} />
+            <span className="tabular-nums font-mono">{timeLeft}</span>
           </div>
-          
-          <button 
-            onClick={handleSave}
-            className={`p-4 rounded-full transition-all duration-300 ${
-              isSaved ? 'bg-accent text-bg shadow-[0_0_20px_rgba(var(--color-accent-rgb),0.5)]' : 'bg-white/5 text-muted hover:text-white hover:bg-white/10 border border-white/5 hover:border-white/20'
-            }`}
-            title={isSaved ? "Saved" : "Save Event"}
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white/50">
+            <CalendarDays className="w-3.5 h-3.5 shrink-0" strokeWidth={1.5} />
+            <span>{dateStr}</span>
+          </div>
+        </div>
+
+        {/* Footer actions */}
+        <div className="flex items-center gap-3 pt-4 border-t border-white/8">
+          {/* Like */}
+          {user ? (
+            <button
+              onClick={handleLike}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border ${
+                isLiked
+                  ? 'bg-rose-400/15 border-rose-400/25 text-rose-300'
+                  : 'bg-white/5 border-white/10 text-white/50 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} strokeWidth={1.5} />
+              <span>{likesCount}</span>
+            </button>
+          ) : (
+            <Link
+              href="/auth/login"
+              className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-white/5 border border-white/10 text-white/30 hover:text-white/60 transition-colors"
+            >
+              <Lock className="w-4 h-4" strokeWidth={1.5} />
+              <span>Like</span>
+            </Link>
+          )}
+
+          {/* Share */}
+          <button
+            onClick={handleShare}
+            className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-white/5 border border-white/10 text-white/50 hover:text-white hover:bg-white/10 transition-all duration-200 ml-auto"
           >
-            <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-current' : ''}`} strokeWidth={isSaved ? 2 : 1.5} />
+            <Share2 className="w-4 h-4" strokeWidth={1.5} />
+            <span className="hidden xs:inline">Share</span>
           </button>
         </div>
 
-        <p className="text-text-secondary text-lg md:text-xl font-light leading-relaxed mb-10 max-w-3xl">
-          {event.description}
-        </p>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-          <div className="bg-white/5 backdrop-blur-sm border border-white/10 p-6 rounded-2xl flex items-center gap-5">
-            <div className="relative flex-shrink-0">
-              <div className="absolute inset-0 bg-accent/20 blur-xl rounded-full animate-pulse" />
-              <Clock className="w-8 h-8 text-accent relative z-10" strokeWidth={1.5} />
-            </div>
-            <div>
-              <p className="text-[10px] text-muted uppercase tracking-[0.2em] font-medium mb-1">T-Minus</p>
-              <p className="text-2xl md:text-3xl font-body font-light text-white tabular-nums">{timeLeft}</p>
-            </div>
-          </div>
-          
-          <div className="bg-white/5 backdrop-blur-sm border border-white/10 p-6 rounded-2xl flex items-center justify-between gap-5">
-            <div>
-              <p className="text-[10px] text-muted uppercase tracking-[0.2em] font-medium mb-1">Date of Event</p>
-              <div className="flex items-center gap-3 text-white">
-                <Calendar className="w-5 h-5 text-muted" strokeWidth={1.5} />
-                <span className="text-xl md:text-2xl font-light">{new Date(event.date).toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-4 pt-8 border-t border-white/10">
-          <button 
-            onClick={handleLike}
-            className={`flex items-center gap-3 px-6 py-3 rounded-full transition-all duration-300 font-medium ${
-              isLiked ? 'bg-[#FF6B6B]/20 text-[#FF6B6B] border border-[#FF6B6B]/30' : 'bg-transparent text-text-secondary hover:bg-white/5 border border-white/10 hover:border-white/20'
-            }`}
+        {/* Not logged in CTA strip */}
+        {!user && (
+          <Link
+            href="/auth/login"
+            className="mt-4 flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-400/15 text-xs text-cyan-300/80 hover:text-cyan-200 hover:border-cyan-400/30 transition-all duration-200"
           >
-            <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} strokeWidth={1.5} />
-            <span>{likesCount} Likes</span>
-          </button>
-          
-          <button 
-            onClick={handleShare}
-            className="flex items-center gap-3 px-6 py-3 rounded-full bg-transparent border border-white/10 text-text-secondary hover:text-white hover:bg-white/5 hover:border-white/20 transition-all duration-300 ml-auto font-medium"
-          >
-            <Share2 className="w-5 h-5" strokeWidth={1.5} />
-            <span>Share</span>
-          </button>
-        </div>
+            <Lock className="w-3 h-3" />
+            Sign in to like, save & get personalized alerts
+          </Link>
+        )}
       </div>
-    </motion.div>
+    </motion.article>
   );
 }
